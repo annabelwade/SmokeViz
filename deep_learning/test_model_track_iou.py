@@ -188,9 +188,7 @@ def test_model_track_iou(dataloader, model, BCE_loss):
         preds = model(batch_data)
 
         # print('len(preds), len(batch_labels), len(truth_fn)', len(preds), len(batch_labels), len(truth_fn)) ### 
-        if idx > 3:
-            sys.exit()
-
+ 
         # Go through every sample individually to get individual sample IoU scores rather than IoU across the batch
         for pred, true, curr_truth_fn in zip(preds, batch_labels, truth_fn):
             # print('pred.shape, true.shape, curr_truth_fn', pred.shape, true.shape, curr_truth_fn) ###
@@ -201,15 +199,15 @@ def test_model_track_iou(dataloader, model, BCE_loss):
             [high_iou, med_iou, low_iou, overall_iou] = get_prev_iou_by_density(iou_dict)
             # print('[high_iou, med_iou, low_iou, overall_iou]', [high_iou, med_iou, low_iou, overall_iou])###
 
-            print(f"IoUs for {curr_truth_fn} - High: {high_iou:.4f}, Medium: {med_iou:.4f}, Low: {low_iou:.4f}, Overall: {overall_iou:.4f}")
+            # print(f"IoUs for {curr_truth_fn} - High: {high_iou:.4f}, Medium: {med_iou:.4f}, Low: {low_iou:.4f}, Overall: {overall_iou:.4f}")
 
-            track_iou_cases(best_cases['low'], worst_cases['low'], curr_truth_fn, low_iou, top_n)
-            track_iou_cases(best_cases['medium'], worst_cases['medium'], curr_truth_fn, med_iou, top_n)
-            track_iou_cases(best_cases['high'], worst_cases['high'], curr_truth_fn, high_iou, top_n)
-            track_iou_cases(best_cases['overall'], worst_cases['overall'], curr_truth_fn, overall_iou, top_n)
+            best_cases['low'], worst_cases['low'] = track_iou_cases(best_cases['low'], worst_cases['low'], curr_truth_fn, low_iou, top_n)
+            best_cases['medium'], worst_cases['medium'] = track_iou_cases(best_cases['medium'], worst_cases['medium'], curr_truth_fn, med_iou, top_n)
+            best_cases['high'], worst_cases['high'] = track_iou_cases(best_cases['high'], worst_cases['high'], curr_truth_fn, high_iou, top_n)
+            best_cases['overall'], worst_cases['overall'] = track_iou_cases(best_cases['overall'], worst_cases['overall'], curr_truth_fn, overall_iou, top_n)
 
-            # print('best_cases', best_cases)
-            # print('worst_cases', worst_cases)
+    print('best_cases', best_cases)
+    print('worst_cases', worst_cases)
 
     return best_cases, worst_cases
 
@@ -226,8 +224,7 @@ def track_iou_cases(best_list, worst_list, truth_fn, iou_score, top_n):
             worst_list.sort(key=lambda x: x[1])  # Sort worst_list in ascending order (lowest IoU first)
             worst_list.pop()  # Remove the highest IoU score from worst_list
 
-    print(f"Best List: {[iou for _, iou in best_list]}")
-    print(f"Worst List: {[iou for _, iou in worst_list]}")
+    return best_list, worst_list
 
             
 def compute_and_save_tracked_cases(dataloader, model, best_cases, worst_cases):
@@ -239,20 +236,25 @@ def compute_and_save_tracked_cases(dataloader, model, best_cases, worst_cases):
         batch_data = batch_data.to(device, dtype=torch.float)
         preds = model(batch_data)
         
-        # Loop through batch items
+        # Loop through batch samples
         for pred, true, curr_truth_fn in zip(preds, batch_labels, truth_fn): 
             for iou_type in ['low', 'medium', 'high', 'overall']:
                 # Check for the best cases
                 for (tracked_truth_fn, iou_score) in best_cases[iou_type]:
+                    # print('curr_truth_fn, tracked_truth_fn',  curr_truth_fn, tracked_truth_fn)
+                    tracked_truth_fn = os.path.basename(tracked_truth_fn)
+                    curr_truth_fn = os.path.basename(curr_truth_fn)
+                    # print('curr_truth_fn, tracked_truth_fn',  curr_truth_fn, tracked_truth_fn)
+                    
                     if curr_truth_fn == tracked_truth_fn:
                         save_test_results(curr_truth_fn, pred.detach().cpu().numpy(), 'best', iou_type, iou_score)
 
                 # Check for the worst cases
                 for (tracked_truth_fn, iou_score) in worst_cases[iou_type]:
+                    tracked_truth_fn = os.path.basename(tracked_truth_fn)
+                    curr_truth_fn = os.path.basename(curr_truth_fn)
                     if curr_truth_fn == tracked_truth_fn:
                         save_test_results(curr_truth_fn, pred.detach().cpu().numpy(), 'worst', iou_type, iou_score)
-
-
 
 def save_test_results(truth_fp, preds, category, iou_type, iou_score):
     save_loc = os.path.join(os.getcwd(), f'test_results/{category}/{iou_type}/{iou_score:.4f}')
@@ -272,8 +274,8 @@ with open('configs/exp{}.json'.format(exp_num)) as fn:
 
 use_ckpt = False
 #use_ckpt = True
-BATCH_SIZE = int(hyperparams["batch_size"])
-# BATCH_SIZE = 128
+# BATCH_SIZE = int(hyperparams["batch_size"])
+BATCH_SIZE = 32
 #train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 #val_loader = torch.utils.data.DataLoader(dataset=val_set, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
@@ -307,6 +309,6 @@ if test_mode:
     model.load_state_dict(checkpoint['model_state_dict'])
     # test_model(test_loader, model, BCE_loss)
     best_cases, worst_cases = test_model_track_iou(test_loader, model, BCE_loss)
-    # compute_and_save_tracked_cases(test_loader, model, best_cases, worst_cases)
+    compute_and_save_tracked_cases(test_loader, model, best_cases, worst_cases)
 else:
     train_model(train_loader, val_loader, model, n_epochs, start_epoch, exp_num, BCE_loss)
