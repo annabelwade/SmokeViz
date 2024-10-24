@@ -23,7 +23,6 @@ if len(sys.argv) > 2:
 else:
     test_mode = False
 
-
 exp_num = str(sys.argv[1])
 data_dict_name = str(sys.argv[3]) 
 # data_dict_name = 'pseudo_labeled_ds.pkl'
