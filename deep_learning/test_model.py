@@ -10,7 +10,7 @@ import torch.nn as nn
 from TestSmokeDataset import SmokeDataset
 from torchvision import transforms
 import segmentation_models_pytorch as smp
-from metrics import compute_iou, display_iou
+from metrics import compute_iou, display_iou, get_prev_iou_by_density
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -72,9 +72,12 @@ def save_test_results(truth_fn, preds, dir_num, iou_dict):
         outfile.write(json_object)
 
 def test_model(dataloader, model, BCE_loss):
+    best_iou_dict = {'low':{'iou': [], 'idx': []}, 'medium': {'iou': [], 'idx': []}, 'high': {'iou': [], 'idx': []}, 'overall': {'iou': [], 'idx': []}}
+    worst_iou_dict = {'low': {'iou': [], 'idx': []}, 'medium':{'iou': [], 'idx': []}, 'high': {'iou': [], 'idx': []}, 'overall': {'iou': [], 'idx': []}}
+
     model.eval()
     torch.set_grad_enabled(False)
-    total_loss = 0.0
+    # total_loss = 0.0
     iou_dict= {'high': {'int': 0, 'union':0, 'prev_int': 0, 'prev_union': 0}, 'medium': {'int': 0, 'union':0, 'prev_int': 0, 'prev_union': 0}, 'low': {'int': 0, 'union':0, 'prev_int': 0, 'prev_union': 0}}
     #max_num = 100
     for idx, data in enumerate(dataloader):
@@ -83,25 +86,53 @@ def test_model(dataloader, model, BCE_loss):
         batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
         preds = model(batch_data)
 
-        high_loss = BCE_loss(preds[:,0,:,:], batch_labels[:,0,:,:]).to(device)
-        med_loss = BCE_loss(preds[:,1,:,:], batch_labels[:,1,:,:]).to(device)
-        low_loss = BCE_loss(preds[:,2,:,:], batch_labels[:,2,:,:]).to(device)
-        loss = 3*high_loss + 2*med_loss + low_loss
-        #loss = high_loss + med_loss + low_loss
-        test_loss = loss.item()
-        total_loss += test_loss
+        # high_loss = BCE_loss(preds[:,0,:,:], batch_labels[:,0,:,:]).to(device)
+        # med_loss = BCE_loss(preds[:,1,:,:], batch_labels[:,1,:,:]).to(device)
+        # low_loss = BCE_loss(preds[:,2,:,:], batch_labels[:,2,:,:]).to(device)
+        # loss = 3*high_loss + 2*med_loss + low_loss
+        # #loss = high_loss + med_loss + low_loss
+        # test_loss = loss.item()
+        # total_loss += test_loss
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
         iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
         iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
+        best_iou_dict, worst_iou_dict = save_ious(iou_dict)
+
+    # Sort the lists to only grab the top/bottom N  
+    # index the data loader 
+    for idx in best_iou_dict[][]:
+        for i, _ in enumerate(dataloader):
+            batch_data, batch_labels, truth_fn = data
+            if i is in best_iou_dict[][]:
+                # make and save model pred.
+        
     #    if idx < max_num:
     #        print(idx)
     #        save_test_results(truth_fn, preds.detach().to('cpu').numpy(), idx, iou_dict)
         #    break
-    display_iou(iou_dict)
-    final_loss = total_loss/len(dataloader)
-    print("Testing Loss: {}".format(round(final_loss,8)), flush=True)
-    return final_loss
+    # display_iou(iou_dict)
+    # final_loss = total_loss/len(dataloader)
+    # print("Testing Loss: {}".format(round(final_loss,8)), flush=True)
+    return _ # final_loss
 
+def save_ious(iou_dict, best_iou_dict, worst_iou_dict, idx):
+    [high_iou, med_iou, low_iou, overall_iou] =get_prev_iou_by_density(iou_dict)
+    if high_iou > 0.95:
+        best_iou_dict['high']['iou'].append(high_iou)
+        best_iou_dict['high']['idx'].append(idx)
+    if med_iou >0.95:
+        best_iou_dict['medium']['iou'].append(med_iou)
+        best_iou_dict['medium']['idx'].append(idx) 
+    if low_iou >0.95:
+        best_iou_dict['low']['iou'].append(low_iou)
+        best_iou_dict['low']['idx'].append(idx) 
+    if overall_iou >0.95:
+        best_iou_dict['overall']['iou'].append(overall_iou)
+        best_iou_dict['overall']['idx'].append(idx) 
+
+    #do the worst
+
+    return best_iou_dict, worst_iou_dict
 def val_model(dataloader, model, BCE_loss):
     model.eval()
     torch.set_grad_enabled(False)
@@ -176,8 +207,8 @@ with open('configs/exp{}.json'.format(exp_num)) as fn:
 
 use_ckpt = False
 #use_ckpt = True
-BATCH_SIZE = int(hyperparams["batch_size"])
-BATCH_SIZE = 128
+# BATCH_SIZE = int(hyperparams["batch_size"])
+BATCH_SIZE = 1
 #train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 #val_loader = torch.utils.data.DataLoader(dataset=val_set, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
@@ -206,7 +237,7 @@ BCE_loss = nn.BCEWithLogitsLoss()
 if test_mode:
     print("IN TEST MODE!")
     #chkpt_pth = '/scratch/alpine/mecr8410/semantic_segmentation_smoke/scripts/deep_learning/models/checkpoint.pth'
-    chkpt_pth = './models/DLV3P_exp1_1719683871.pth'
+    chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Rey.Koki/SmokeViz_code/deep_learning/models/DeepLabV3Plus_exp0_1729717558.pth'
     print(chkpt_pth)
     checkpoint=torch.load(chkpt_pth)
     model.load_state_dict(checkpoint['model_state_dict'])
