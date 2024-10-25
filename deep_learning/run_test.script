@@ -3,24 +3,23 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=10G
-#SBATCH --time=1:30:00
-#SBATCH --partition=aa100
-#SBATCH --output=logs/test.%j.log
-#SBATCH --gres=gpu:1
-#SBATCH --account=ucb437_asc1
+#SBATCH --mem=0
+#SBATCH --time=01:30:00
+#SBATCH --partition=fge
+#SBATCH --qos=gpu
+#SBATCH --account=rda-ghpcs
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user="rey.koki@colorado.edu"
+#SBATCH --mail-user="annabel.wade@noaa.gov"
+#SBATCH --chdir=.
 
 unset SLURM_MEM_PER_NODE
 unset SLURM_MEM_PER_GPU
 
-module load cudnn/8.6
-module load cuda/12.1.1
+module purge
+module load cuda
 
-source /curc/sw/anaconda3/2023.09/bin/activate
-conda activate alps
-export LD_LIBRARY_PATH=/projects/mecr8410/software/anaconda/envs/alps/lib/python3.12/site-packages/nvidia/nccl/lib:$LD_LIBRARY_PATH
+source /scratch1/RDARCH/rda-ghpcs/Annabel.Wade/miniconda3/etc/profile.d/conda.sh
+conda activate smoke
 
-python test_model.py 1 True
+python test_model_track_iou.py 1 True /scratch1/RDARCH/rda-ghpcs/Rey.Koki/SmokeViz_code/deep_learning/dataset_pointers/smokeviz_yr_split/SmokeViz.pkl
 exit 0
