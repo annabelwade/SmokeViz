@@ -39,26 +39,21 @@ test_set = SmokeDataset(data_dict['test'], data_transforms)
 #print('there are {} training samples in this dataset'.format(len(train_set)))
 print('there are {} testing samples in this dataset'.format(len(test_set)))
 
-def save_test_results(truth_fn, preds, dir_num, iou_dict):
-    save_loc = os.path.join(os.getcwd(),'test_results/{}/'.format(dir_num)
+def save_test_results(truth_fn, preds, dir_num, iou_dict, category='', iou_type=''):
+    save_loc = os.path.join(os.getcwd(),'test_results' , category, iou_type, dir_num) # /{}/{}/{}/'.format(category, iou_type, dir_num))
     if not os.path.exists(save_loc):
         os.makedirs(save_loc)
     print('Saving fn_info and pred to {}'.format(save_loc))
                             
     truth_fn = truth_fn[0]
     data_fn = truth_fn.replace('truth', 'data')
-    coords_fn = truth_fn.replace('truth', 'coords')
+    # coords_fn = truth_fn.replace('truth', 'coords')
     skimage.io.imsave(save_loc + 'preds.tif', preds)
-    low_iou = iou_dict['low']['prev_int']/iou_dict['low']['prev_union']
-    medium_iou = iou_dict['medium']['prev_int']/iou_dict['medium']['prev_union']
-    high_iou = iou_dict['high']['prev_int']/iou_dict['high']['prev_union']
-    overall_int = iou_dict['low']['prev_int'] + iou_dict['medium']['prev_int'] + iou_dict['high']['prev_int']
-    overall_union = iou_dict['low']['prev_union'] + iou_dict['medium']['prev_union'] + iou_dict['high']['prev_union']
-    overall_iou = overall_int / overall_union
+    [high_iou, med_iou, low_iou, overall_iou] = get_prev_iou_by_density(iou_dict)
 
     fn_info = {'data_fn': data_fn,
                'truth_fn': truth_fn,
-               'coords_fn': coords_fn,
+               # 'coords_fn': coords_fn,
                'low_iou': str(low_iou.cpu().numpy()),
                'medium_iou': str(medium_iou.cpu().numpy()),
                'high_iou': str(high_iou.cpu().numpy()),
@@ -96,6 +91,7 @@ def test_model(dataloader, model, BCE_loss):
     # index the data loader 
     for density in best_iou_dict:
         for idx in best_iou_dict[density]['idx']:
+            print('Saving best IoU cases...')
             # index the data loader,
             # for i, _ in enumerate(dataloader):
             batch_data, batch_labels, truth_fn = dataloader.dataset[idx]
@@ -104,7 +100,16 @@ def test_model(dataloader, model, BCE_loss):
             iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
             iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
             iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
-            save_test_results(truth_fn, preds.detach().to('cpu').numpy(), idx, iou_dict)
+            save_test_results(truth_fn, preds.detach().to('cpu').numpy(), idx, iou_dict, category=density, iou_type='best')
+        for idx in worst_iou_dict[density]['idx']:
+            print('Saving worst IoU cases...')
+            batch_data, batch_labels, truth_fn = dataloader.dataset[idx]
+            batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
+            preds = model(batch_data)
+            iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
+            iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
+            iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
+            save_test_results(truth_fn, preds.detach().to('cpu').numpy(), idx, iou_dict, category=density, iou_type='worst')
     return 
 
 def sort_and_clip_iou_dict(iou_dict, top_n, best=True):
