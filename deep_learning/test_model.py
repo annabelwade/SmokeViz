@@ -23,7 +23,6 @@ if len(sys.argv) > 2:
 else:
     test_mode = False
 
-
 exp_num = str(sys.argv[1])
 data_dict_name = str(sys.argv[3])
 print(f'data_dict: {data_dict_name}')
@@ -40,28 +39,27 @@ test_set = SmokeDataset(data_dict['test'], data_transforms)
 print('there are {} testing samples in this dataset'.format(len(test_set)))
 
 def save_test_results(truth_fn, preds, dir_num, iou_dict, category='', iou_type=''):
-    save_loc = os.path.join(os.getcwd(),'test_results' , category, iou_type, dir_num) # /{}/{}/{}/'.format(category, iou_type, dir_num))
+    save_loc = os.path.join(os.getcwd(),'test_results' , category, str(iou_type), str(dir_num)) # /{}/{}/{}/'.format(category, iou_type, dir_num))
     if not os.path.exists(save_loc):
         os.makedirs(save_loc)
     print('Saving fn_info and pred to {}'.format(save_loc))
-                            
-    truth_fn = truth_fn[0]
+
     data_fn = truth_fn.replace('truth', 'data')
     # coords_fn = truth_fn.replace('truth', 'coords')
-    skimage.io.imsave(save_loc + 'preds.tif', preds)
+    skimage.io.imsave(os.path.join(save_loc,'preds.tif'), preds)
     [high_iou, med_iou, low_iou, overall_iou] = get_prev_iou_by_density(iou_dict)
 
     fn_info = {'data_fn': data_fn,
                'truth_fn': truth_fn,
                # 'coords_fn': coords_fn,
                'low_iou': str(low_iou.cpu().numpy()),
-               'medium_iou': str(medium_iou.cpu().numpy()),
+               'medium_iou': str(med_iou.cpu().numpy()),
                'high_iou': str(high_iou.cpu().numpy()),
                'overall_iou': str(overall_iou.cpu().numpy())
                }
     json_object = json.dumps(fn_info, indent=4)
     
-    with open(save_loc + "fn_info.json", "w") as outfile:
+    with open(os.path.join(save_loc,"fn_info.json"), "w") as outfile:
         outfile.write(json_object)
 
 def test_model(dataloader, model, BCE_loss):
@@ -74,8 +72,9 @@ def test_model(dataloader, model, BCE_loss):
 
     print('Calculating IoUs for testing data...')
     for idx, data in enumerate(dataloader):
+        # if idx < 3: ##### RM
         batch_data, batch_labels, truth_fn = data
-        # print(len(batch_data))
+        # print('1', batch_data.shape, batch_labels.shape) ### #RM
         batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
         preds = model(batch_data)
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
@@ -83,11 +82,12 @@ def test_model(dataloader, model, BCE_loss):
         iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
         best_iou_dict, worst_iou_dict = save_iou(iou_dict, best_iou_dict, worst_iou_dict, idx, top_n)
 
+    # print(best_iou_dict, worst_iou_dict)
     print('Sorting best/worst IoUs...')
     # Sort the lists to only grab the top/bottom N 
     best_iou_dict = sort_and_clip_iou_dict(best_iou_dict, top_n, best=True)
     worst_iou_dict = sort_and_clip_iou_dict(worst_iou_dict, top_n, best=False)
-
+    print(best_iou_dict, worst_iou_dict)
     # index the data loader 
     for density in best_iou_dict:
         for idx in best_iou_dict[density]['idx']:
@@ -96,16 +96,24 @@ def test_model(dataloader, model, BCE_loss):
             # for i, _ in enumerate(dataloader):
             batch_data, batch_labels, truth_fn = dataloader.dataset[idx]
             batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
-            preds = model(batch_data)
+            # print('2', batch_data.shape, batch_labels.shape) #### RM
+            batch_labels = torch.unsqueeze(batch_labels, 0); batch_data = torch.unsqueeze(batch_data, 0); 
+            # print('3', batch_data.shape, batch_labels.shape) #### RM
+            preds = model(batch_data )
             iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
             iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
             iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
             save_test_results(truth_fn, preds.detach().to('cpu').numpy(), idx, iou_dict, category=density, iou_type='best')
         for idx in worst_iou_dict[density]['idx']:
             print('Saving worst IoU cases...')
+            # print('2', batch_data.shape, batch_labels.shape) #### RM
             batch_data, batch_labels, truth_fn = dataloader.dataset[idx]
+            # print('2', batch_data.shape, batch_labels.shape) #### RM
             batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
-            preds = model(batch_data)
+            # print('2', batch_data.shape, batch_labels.shape) #### RM
+            batch_labels = torch.unsqueeze(batch_labels, 0); batch_data = torch.unsqueeze(batch_data, 0); 
+            # print('3', batch_data.shape, batch_labels.shape) #### RM
+            preds = model(batch_data )
             iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
             iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
             iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
@@ -130,8 +138,8 @@ def sort_and_clip_iou_dict(iou_dict, top_n, best=True):
 
     return iou_dict
 
-def save_iou(iou_dict, best_iou_dict, worst_iou_dict, idx, best_threshold=0.9, worst_threshold=0.1):
-    [high_iou, med_iou, low_iou, overall_iou] =get_prev_iou_by_density(iou_dict)
+def save_iou(iou_dict, best_iou_dict, worst_iou_dict, idx, best_threshold=0.6, worst_threshold=0.2): 
+    [high_iou, med_iou, low_iou, overall_iou] = get_prev_iou_by_density(iou_dict)
     if high_iou > best_threshold:
         best_iou_dict['high']['iou'].append(high_iou)
         best_iou_dict['high']['idx'].append(idx)
@@ -144,7 +152,6 @@ def save_iou(iou_dict, best_iou_dict, worst_iou_dict, idx, best_threshold=0.9, w
     if overall_iou > best_threshold:
         best_iou_dict['overall']['iou'].append(overall_iou)
         best_iou_dict['overall']['idx'].append(idx)
-
     if high_iou < worst_threshold:
         worst_iou_dict['high']['iou'].append(high_iou)
         worst_iou_dict['high']['idx'].append(idx)
