@@ -122,23 +122,20 @@ def test_model(dataloader, model, BCE_loss):
 
 def sort_and_clip_iou_dict(iou_dict, top_n, best=True):
     for density in iou_dict:
-        # Zip IoU and idx together to sort them
-        paired_iou_idx = list(zip(iou_dict[density]['iou'], iou_dict[density]['idx']))
+        if len(iou_dict[density]['iou']) > 0:  # Skip if IoU list is empty
+            iou_tensor = torch.cat(iou_dict[density]['iou']) # make list of tensors into single tensor for sorting
+            # Sort by IoU
+            sort_idx = torch.argsort(iou_tensor, descending=best)
+            new_iou = iou_tensor[sort_idx]
+            new_idx = torch.tensor(iou_dict[density]['idx'])[sort_idx].tolist()
 
-        # Sort by IoU values, in revFerse order for best IoUs, normal for worst IoUs
-        paired_iou_idx.sort(key=lambda x: x[0], reverse=best)
-
-        # Clip to the top N entries
-        clipped_iou_idx = paired_iou_idx[:top_n]
-        new_iou=[]; new_idx=[]
-        for iou, idx in clipped_iou_idx:
-            new_iou.append(iou); new_idx.append(idx)
-        iou_dict[density]['iou'] = new_iou
-        iou_dict[density]['idx'] = new_idx
-
+            # Clip to top N
+            iou_dict[density]['iou'] = [new_iou[i].unsqueeze(0) for i in range(top_n)]  # Convert back to list of single-element tensors
+            iou_dict[density]['idx'] = new_idx[:top_n]
+    
     return iou_dict
 
-def save_iou(iou_dict, best_iou_dict, worst_iou_dict, idx, best_threshold=0.6, worst_threshold=0.2): 
+def save_iou(iou_dict, best_iou_dict, worst_iou_dict, idx, best_threshold=0.4, worst_threshold=0.2): 
     [high_iou, med_iou, low_iou, overall_iou] = get_prev_iou_by_density(iou_dict)
     if high_iou > best_threshold:
         best_iou_dict['high']['iou'].append(high_iou)
