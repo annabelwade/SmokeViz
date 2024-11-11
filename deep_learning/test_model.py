@@ -72,11 +72,13 @@ def test_model(dataloader, model, BCE_loss):
 
     print('Calculating IoUs for testing data...')
     for idx, data in enumerate(dataloader):
-        # if idx < 3: ##### RM
         batch_data, batch_labels, truth_fn = data
-        # print('1', batch_data.shape, batch_labels.shape) ### #RM
         batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
         preds = model(batch_data)
+        image_size = batch_labels[:,0,:,:].numel()
+        # filter out sample if sum of labels is the entire num of pixels in the image – don’t include samples where the entire image is a plume
+        if (batch_labels.sum(dim=[0, 2, 3]) >= image_size).any().item():
+            continue
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
         iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
         iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
