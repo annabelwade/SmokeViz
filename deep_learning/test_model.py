@@ -62,7 +62,7 @@ def save_test_results(truth_fn, preds, dir_num, iou_dict, category='', iou_type=
     with open(os.path.join(save_loc,"fn_info.json"), "w") as outfile:
         outfile.write(json_object)
 
-def test_model(dataloader, model, BCE_loss):
+def test_model(dataloader, model, BCE_loss, required_densities=3):
     best_iou_dict = {'low':{'iou': [], 'idx': []}, 'medium': {'iou': [], 'idx': []}, 'high': {'iou': [], 'idx': []}, 'overall': {'iou': [], 'idx': []}}
     worst_iou_dict = {'low': {'iou': [], 'idx': []}, 'medium':{'iou': [], 'idx': []}, 'high': {'iou': [], 'idx': []}, 'overall': {'iou': [], 'idx': []}}
     model.eval()
@@ -76,8 +76,11 @@ def test_model(dataloader, model, BCE_loss):
         batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
         preds = model(batch_data)
         image_size = batch_labels[:,0,:,:].numel()
+        density_sums = batch_labels.sum(dim=[0,2,3])         
         # filter out sample if sum of labels is the entire num of pixels in the image – don’t include samples where the entire image is a plume
-        if (batch_labels.sum(dim=[0, 2, 3]) >= image_size).any().item():
+        if (density_sums == image_size).any().item():
+            continue
+        if (density_sums > 0).sum(dim=1).item() < required_densities: 
             continue
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
         iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
