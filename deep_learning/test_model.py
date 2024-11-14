@@ -11,6 +11,7 @@ from TestSmokeDataset import SmokeDataset
 from torchvision import transforms
 import segmentation_models_pytorch as smp
 from metrics import compute_iou, display_iou, get_prev_iou_by_density
+import time
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -38,8 +39,9 @@ test_set = SmokeDataset(data_dict['test'], data_transforms)
 #print('there are {} training samples in this dataset'.format(len(train_set)))
 print('there are {} testing samples in this dataset'.format(len(test_set)))
 
+curr_time = str(int(time.time())) 
 def save_test_results(truth_fn, preds, dir_num, iou_dict, category='', iou_type=''):
-    save_loc = os.path.join(os.getcwd(),'test_results' , category, str(iou_type), str(dir_num)) # /{}/{}/{}/'.format(category, iou_type, dir_num))
+    save_loc = os.path.join(os.getcwd(),'test_results_'+curr_time , category, str(iou_type), str(dir_num)) # /{}/{}/{}/'.format(category, iou_type, dir_num))
     if not os.path.exists(save_loc):
         os.makedirs(save_loc)
     # print('Saving fn_info and pred to {}'.format(save_loc))
@@ -78,9 +80,9 @@ def test_model(dataloader, model, BCE_loss, required_densities=3):
         image_size = batch_labels[:,0,:,:].numel()
         density_sums = batch_labels.sum(dim=[0,2,3])         
         # filter out sample if sum of labels is the entire num of pixels in the image – don’t include samples where the entire image is a plume
-        if (density_sums == image_size).any().item():
+        if (density_sums >= 0.9*image_size).any().item():
             continue
-        if (density_sums > 0).sum(dim=1).item() < required_densities: 
+        if (density_sums > 0).sum().item() < required_densities: 
             continue
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
         iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
