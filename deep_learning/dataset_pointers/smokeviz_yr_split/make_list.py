@@ -15,6 +15,7 @@ cats = ['Light', 'Medium', 'Heavy', 'None']
 #cat_count = {'Light':1e10, 'Medium': 1e10, 'Heavy': 1e10, 'None': 1e10}
 cat_count = {'Light':int(1e3), 'Medium': int(1e3), 'Heavy': int(1e3), 'None': int(1e3)}
 cat_count = {'Light':1e10, 'Medium': 1e10, 'Heavy': 1e10}
+cat_count = {'Light':25, 'Medium': 25, 'Heavy': 25, 'None': 25}
 
 def get_train_fns(yrs, cat_count):
     truth_fns = []
@@ -44,6 +45,7 @@ print('number of train samples:', len(train_truth))
 print('number of val samples:', len(val_truth))
 print('number of test samples:', len(test_truth))
 
-with open('SmokeViz.pkl', 'wb') as handle:
+print(os.path.join(os.getcwd(), 'subset_25.pkl'))
+with open('subset_25.pkl', 'wb') as handle:
     pickle.dump(data_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
