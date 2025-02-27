@@ -82,6 +82,9 @@ def test_model(dataloader, model, BCE_loss, required_densities=3):
         # filter out sample if sum of labels is the entire num of pixels in the image – don’t include samples where the entire image is a plume
         if (density_sums >= 0.9*image_size).any().item():
             continue
+        if (density_sums > 3000).any().item(): #  3000 pixels or less can be filled in; this is roughly 5% of the image 
+            continue
+        # filter out samples without certain num of densities
         if (density_sums > 0).sum().item() < required_densities: 
             continue
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
@@ -273,7 +276,7 @@ BCE_loss = nn.BCEWithLogitsLoss()
 if test_mode:
     print("IN TEST MODE!")
     #chkpt_pth = '/scratch/alpine/mecr8410/semantic_segmentation_smoke/scripts/deep_learning/models/checkpoint.pth'
-    chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Rey.Koki/SmokeViz_code/deep_learning/models/DeepLabV3Plus_exp0_1729717558.pth'
+    chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Rey.Koki/SmokeViz_code/pl_derived_ds/models/ckpt1.pth'
     print(chkpt_pth)
     checkpoint=torch.load(chkpt_pth)
     model.load_state_dict(checkpoint['model_state_dict'])
