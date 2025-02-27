@@ -154,25 +154,25 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
                     'val_iou': val_iou,
                     'history': history
                     }
-            chkpt_pth = './models/{}_exp{}_best_{}.pth'.format(hyperparams['architecture'], exp_num, curr_time)
+            chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_best_{}.pth'.format(hyperparams['architecture'], exp_num, curr_time)
             if seed is not None:
-                chkpt_pth = './models/{}_exp{}_seed{}_best_{}.pth'.format(hyperparams['architecture'], exp_num, seed, curr_time)
+                chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_seed{}_best_{}.pth'.format(hyperparams['architecture'], exp_num, seed, curr_time)
             torch.save(checkpoint, chkpt_pth)
             print('SAVING MODEL:\n', chkpt_pth)
-        # elif 'save_every_10epochs' in hyperparams and hyperparams['save_every_10epochs'] == "True":
-        if (epoch+1) % 10 == 0:
-            checkpoint = {
+        elif 'save_every_10epochs' in hyperparams and hyperparams['save_every_10epochs'] == "True":
+            if (epoch+1) % 10 == 0:
+                checkpoint = {
                     'epoch': epoch + 1,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'val_iou': val_iou,
                     'history': history
                     }
-            chkpt_pth = './models/{}_exp{}_{}.pth'.format(hyperparams['architecture'], exp_num, int(time.time()))
-            if seed is not None:
-                chkpt_pth = './models/{}_exp{}_seed{}_{}.pth'.format(hyperparams['architecture'], exp_num, seed, int(time.time()))
-            torch.save(checkpoint, chkpt_pth)
-            print('SAVING MODEL:\n', chkpt_pth)
+                chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_{}.pth'.format(hyperparams['architecture'], exp_num, int(time.time()))
+                if seed is not None:
+                    chkpt_pth = '/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_seed{}_{}.pth'.format(hyperparams['architecture'], exp_num, seed, int(time.time()))
+                torch.save(checkpoint, chkpt_pth)
+                print('SAVING MODEL:\n', chkpt_pth)
 
     return model, history
 
@@ -223,9 +223,9 @@ best_val_iou = -100000.0
 history = None
 if use_ckpt == 'True':  # hyperparams['use_chkpt']:    
     # ckpts_lst = ["/scratch1/RDARCH/rda-ghpcs/Rey.Koki/SmokeViz_code/deep_learning/models/DeepLabV3Plus_exp0_1731375075.pth"]
-    ckpts_lst = glob.glob('./models/{}_exp{}_*.pth'.format(hyperparams['architecture'], exp_num))
+    ckpts_lst = glob.glob('/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_*.pth'.format(hyperparams['architecture'], exp_num))
     if seed is not None:
-        ckpts_lst = glob.glob('./models/{}_exp{}_seed{}_*.pth'.format(hyperparams['architecture'], exp_num, seed))
+        ckpts_lst = glob.glob('/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_seed{}_*.pth'.format(hyperparams['architecture'], exp_num, seed))
     # if (len(exp_num)>1) and (len(ckpts_lst) == 0): # exp_num variants i.e. 1.1  and there are no ckpts for that variant. 
     #     temp_exp_num = exp_num[0] 
     #     ckpts_lst = glob.glob('./models/{}_exp{}_*.pth'.format(hyperparams['architecture'], temp_exp_num))

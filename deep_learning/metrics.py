@@ -61,12 +61,13 @@ def get_stats(pred, true, level, stats_dict, convert_to_classes=True, threshold=
     if convert_to_classes: # check if the preds were already converted to classes
         pred = torch.sigmoid(pred)
         pred = (pred > 0.5) * 1
-    
+    true = true.int()
+
     tp, fp, fn, tn = smp.metrics.get_stats(pred, true, threshold=threshold, mode='binary')
-    stats_dict[level]['tp'] += tp
-    stats_dict[level]['fp'] += fp
-    stats_dict[level]['fn'] += fn
-    stats_dict[level]['tn'] += tn
+    stats_dict[level]['tp'] += tp.sum()
+    stats_dict[level]['fp'] += fp.sum()
+    stats_dict[level]['fn'] += fn.sum()
+    stats_dict[level]['tn'] += tn.sum()
     return stats_dict
 
 def compute_precision(stats_dict):
@@ -90,7 +91,9 @@ def compute_precision(stats_dict):
     except ZeroDivisionError:
         precision = float('nan')
         
-    return [high_precision, med_precision, low_precision, precision]
+    precision_vals = [high_precision, med_precision, low_precision, precision]
+    precision_vals = [item.item() for item in precision_vals]
+    return precision_vals
 
 def compute_recall(stats_dict):
     try:
@@ -113,6 +116,8 @@ def compute_recall(stats_dict):
     except ZeroDivisionError:
         recall = float('nan')
 
-    return [high_recall, med_recall, low_recall, recall]
+    recall_vals = [high_recall, med_recall, low_recall, recall]
+    recall_vals = [item.item() for item in recall_vals]
+    return recall_vals
     
 
