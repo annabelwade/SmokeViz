@@ -1,10 +1,9 @@
-#!/bin/bash
-
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=2
+#!/bin/bash 
+#SBATCH --nodes=1 
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=0
-#SBATCH --time=24:00:00
+#SBATCH --time=12:00:00
 #SBATCH --partition=fge
 #SBATCH --qos=gpu
 #SBATCH --account=rda-ghpcs
@@ -21,6 +20,11 @@ module load cuda
 source /scratch1/RDARCH/rda-ghpcs/Annabel.Wade/miniconda3/etc/profile.d/conda.sh
 conda activate smoke
 
-python model.py $EXP_NUM $SEED
+# python test_models.py 1.6.4_F region
+# python test_models.py 1.6.3_F region
+# python test_models.py 1.6.2_F region
+# python test_models.py 1.6.1_F region
+#1_2_3_4_5_7_T architecture
+python test_models.py $INPUT architecture encoder
 report-mem
 exit 0
