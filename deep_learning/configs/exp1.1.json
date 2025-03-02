@@ -1,0 +1,9 @@
+{
+    "architecture":"DeepLabV3Plus",
+    "encoder": "resnext50_32x4d",
+    "lr": 1e-2,
+    "batch_size": 32, 
+    "use_chkpt": "False" ,
+    "loss":"BCEWithLogitsLoss",
+    "encoder_weights":"imagenet"	
+}

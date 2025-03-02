@@ -1,7 +1,7 @@
 {
-    "architecture":"PAN",
+    "architecture":"DeepLabV3Plus",
     "encoder": "timm-efficientnet-b2",
-    "lr": 1e-2,
+    "lr": 5e-4,
     "batch_size": 128,
     "use_chkpt": "False",
     "loss":"BCEWithLogitsLoss",
@@ -11,4 +11,3 @@
     "use_best_model":"True",
     "noG18":"False"
 }
-

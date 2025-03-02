@@ -1,0 +1,10 @@
+{
+    "architecture":"DeepLabV3Plus",
+    "encoder": "timm-efficientnet-b2",
+    "lr": 1e-2,
+    "batch_size": 32, 
+    "use_chkpt": "False",
+    "loss": "CombinedLoss",
+    "encoder_weights":"imagenet",
+    "dn_weights":[3,2,1]
+}

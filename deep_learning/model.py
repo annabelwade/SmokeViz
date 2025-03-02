@@ -64,7 +64,7 @@ print(f'Dataset splits in {dict_fp}:\n  Training: {len(train_set)}\n  Validation
 
 more_metrics = True # if True, will also compute precision, recall
 
-def val_model(dataloader, model, loss_fn, dn_weights):
+def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
     model.eval()
     torch.set_grad_enabled(False)
     total_loss = 0.0
@@ -86,14 +86,14 @@ def val_model(dataloader, model, loss_fn, dn_weights):
         test_loss = loss.item()
         total_loss += test_loss
         
-        iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
-        iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
-        iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
+        iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict, decision_thresh=decision_thresh)
+        iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict, decision_thresh=decision_thresh)
+        iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict, decision_thresh=decision_thresh)
 
         if more_metrics:
-            stats_dict = get_stats(preds[:, 0, :, :], batch_labels[:, 0, :, :], 'high', stats_dict)
-            stats_dict = get_stats(preds[:, 1, :, :], batch_labels[:, 1, :, :], 'medium', stats_dict)
-            stats_dict = get_stats(preds[:, 2, :, :], batch_labels[:, 2, :, :], 'low', stats_dict)
+            stats_dict = get_stats(preds[:, 0, :, :], batch_labels[:, 0, :, :], 'high', stats_dict, decision_thresh=decision_thresh)
+            stats_dict = get_stats(preds[:, 1, :, :], batch_labels[:, 1, :, :], 'medium', stats_dict, decision_thresh=decision_thresh)
+            stats_dict = get_stats(preds[:, 2, :, :], batch_labels[:, 2, :, :], 'low', stats_dict, decision_thresh=decision_thresh)
 
     weighted_iou = get_weighted_iou(iou_dict, dn_weights)
 
@@ -106,10 +106,12 @@ def val_model(dataloader, model, loss_fn, dn_weights):
     return weighted_iou, final_loss, precision, recall
 
 def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, exp_num, 
-                best_val_iou, loss_fn, history, dn_weights):
+                best_val_iou, loss_fn, history, dn_weights, decision_thresh=0.5):
     if history is None:
         history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[]) 
     
+    print('using classification decision threshold of {}'.format(decision_thresh))
+
     for epoch in range(start_epoch, n_epochs):
         total_loss = 0.0
         print('--------------\nStarting Epoch: {}'.format(epoch), flush=True)
@@ -133,7 +135,7 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
         epoch_loss = total_loss/len(train_dataloader)
 
         # print("Training Loss:   {0}".format(round(epoch_loss,8), epoch+1), flush=True)
-        val_iou, val_loss, val_precision, val_recall = val_model(val_dataloader, model, loss_fn, dn_weights)
+        val_iou, val_loss, val_precision, val_recall = val_model(val_dataloader, model, loss_fn, dn_weights, decision_thresh=decision_thresh)
         if isinstance(val_iou, torch.Tensor):
             val_iou = val_iou.item()
         history['val_iou'].append(val_iou)
@@ -179,10 +181,11 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
 if not "dn_weights" in hyperparams:
     dn_weights = [3,2,1] 
 else:
-    dn_weights = list(hyperparams["dn_weights"]) 
+    dn_weights = list(hyperparams["dn_weights"])
 
-print('dn_weights')
-print(type(dn_weights), dn_weights)
+decision_thresh = 0.5
+if "decision_thresh" in hyperparams:
+    decision_thresh = hyperparams["decision_thresh"]
 
 use_ckpt = hyperparams["use_chkpt"]
 BATCH_SIZE = int(hyperparams["batch_size"])
@@ -262,7 +265,7 @@ if use_ckpt == 'True':  # hyperparams['use_chkpt']:
         print('Loading from checkpoint at {} (epoch {}, best_val_iou {})'.format(ckpt_fp, start_epoch, best_val_iou))
 
 start = time.time()
-model, history = train_model(train_loader, val_loader, model, n_epochs, start_epoch, exp_num, best_val_iou, loss_fn, history, dn_weights)
+model, history = train_model(train_loader, val_loader, model, n_epochs, start_epoch, exp_num, best_val_iou, loss_fn, history, dn_weights, decision_thresh=decision_thresh)
 dt = time.time() - start
 print(f"Elapsed time: {dt:.2f} seconds")
 

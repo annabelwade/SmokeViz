@@ -1,7 +1,7 @@
 {
     "architecture":"PAN",
     "encoder": "timm-efficientnet-b2",
-    "lr": 1e-2,
+    "lr": 5e-5,
     "batch_size": 128,
     "use_chkpt": "False",
     "loss":"BCEWithLogitsLoss",

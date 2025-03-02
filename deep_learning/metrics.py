@@ -1,10 +1,10 @@
 import torch
 import segmentation_models_pytorch as smp
 
-def compute_iou(pred, true, level, iou_dict, print_ious=False, convert_to_classes=True):
+def compute_iou(pred, true, level, iou_dict, print_ious=False, decision_thresh=0.5, convert_to_classes=True):
     if convert_to_classes: # check if the preds were already converted to classes
         pred = torch.sigmoid(pred)
-        pred = (pred > 0.5) * 1
+        pred = (pred > decision_thresh) * 1
     intersection = (pred + true == 2).sum()
     union = (pred + true >= 1).sum()
     iou = intersection / union
@@ -57,10 +57,10 @@ def display_iou(iou_dict):
 
     return [high_iou, med_iou, low_iou, iou]
 
-def get_stats(pred, true, level, stats_dict, convert_to_classes=True, threshold=0.5):
+def get_stats(pred, true, level, stats_dict, convert_to_classes=True, decision_thresh=0.5):
     if convert_to_classes: # check if the preds were already converted to classes
         pred = torch.sigmoid(pred)
-        pred = (pred > 0.5) * 1
+        pred = (pred > decision_thresh) * 1
     true = true.int()
 
     tp, fp, fn, tn = smp.metrics.get_stats(pred, true, threshold=threshold, mode='binary')

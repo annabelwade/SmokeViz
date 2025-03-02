@@ -1,14 +1,11 @@
 {
     "architecture":"PAN",
-    "encoder": "timm-efficientnet-b2",
+    "encoder": "timm-efficientnet-b3",
     "lr": 1e-2,
-    "batch_size": 128,
+    "batch_size": 128, 
     "use_chkpt": "False",
     "loss":"BCEWithLogitsLoss",
     "encoder_weights":"None",
     "dn_weights":[3,2,1],
-    "save_every_10epochs":"False",
-    "use_best_model":"True",
-    "noG18":"False"
+    "use_best_model":"True" 
 }
-

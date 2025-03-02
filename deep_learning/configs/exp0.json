@@ -1,7 +1,7 @@
 {
-    "encoder": "timm-efficientnet-b2",
     "lr": 5e-3,
-    "batch_size": 64, 
-    "model": "PSPNet"
+    "batch_size": 16,
+    "loss":"BCEWithLogitsLoss",
+    "encoder_weights":"imagenet" 
 }
 

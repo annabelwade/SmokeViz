@@ -1,6 +1,6 @@
 {
-    "architecture":"MANet",
-    "encoder": "timm-efficientnet-b2",
+    "architecture":"DeepLabV3Plus",
+    "encoder": "timm-mobilenetv3_large_100",
     "lr": 1e-2,
     "batch_size": 128, 
     "use_chkpt": "False",
