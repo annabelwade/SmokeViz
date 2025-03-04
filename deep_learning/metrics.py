@@ -63,7 +63,7 @@ def get_stats(pred, true, level, stats_dict, convert_to_classes=True, decision_t
         pred = (pred > decision_thresh) * 1
     true = true.int()
 
-    tp, fp, fn, tn = smp.metrics.get_stats(pred, true, threshold=threshold, mode='binary')
+    tp, fp, fn, tn = smp.metrics.get_stats(pred, true, threshold=None, mode='binary')
     stats_dict[level]['tp'] += tp.sum()
     stats_dict[level]['fp'] += fp.sum()
     stats_dict[level]['fn'] += fn.sum()
