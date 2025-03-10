@@ -14,7 +14,8 @@ from Loss import DiceLoss, CombinedLoss
 from metrics import *
 
 # command example:
-# sbatch --export=EXP_NUM=3,SEED=20 --output=logs/exp3_seed2_metrics.log --job-name=exp3_seed20_metrics run_model.script
+# sbatch --export=EXP_NUM=3,SEED=20 --output=logs/exp3_seed20_metrics.log --job-name=exp3_seed20_metrics run_model.script
+# sbatch --export=EXP_NUM=1.9,SEED=20 --output=logs/exp1.9_seed20.log --job-name=exp1_seed20_metrics run_model.script
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_GPUs = torch.cuda.device_count()
@@ -213,7 +214,7 @@ val_loader = torch.utils.data.DataLoader(dataset=val_set, batch_size=BATCH_SIZE,
         )
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
 
-n_epochs = 40
+n_epochs = 100
 start_epoch = 0
 model = smp.create_model( # create any model architecture just with parameters, without using its class
         arch=hyperparams['architecture'],
