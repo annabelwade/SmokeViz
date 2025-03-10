@@ -119,11 +119,13 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
 def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, exp_num, 
                 best_val_iou, loss_fn, history, dn_weights, decision_thresh=0.5):
     if history is None:
-        history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[]) 
+        history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[], step_sizes=[]) 
     
     print('using classification decision threshold of {}'.format(decision_thresh))
-
+    
     for epoch in range(start_epoch, n_epochs):
+        step_sizes_epoch = [] ###
+
         total_loss = 0.0
         print('--------------\nStarting Epoch: {}'.format(epoch), flush=True)
         model.train()
@@ -140,9 +142,18 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
             low_loss = loss_fn(preds[:,2,:,:], batch_labels[:,2,:,:]).to(device)
             loss = dn_weights[0]*high_loss + dn_weights[1]*med_loss + dn_weights[2]*low_loss
             loss.backward()
+
+            # save step sizes ###
+            with torch.no_grad():
+                for param in model.parameters():
+                    if param.grad is not None:
+                        step_size = optimizer.param_groups[0]['lr'] * param.grad / (torch.sqrt(param.exp_avg_sq) + optimizer.defaults['eps'])
+                        step_sizes_epoch.append(step_size.norm().item())  # Log norm of step sizes ###
+
             optimizer.step()
             train_loss = loss.item()
             total_loss += train_loss
+        avg_step_size = sum(step_sizes_epoch) / len(step_sizes_epoch) ###
         epoch_loss = total_loss/len(train_dataloader)
 
         # print("Training Loss:   {0}".format(round(epoch_loss,8), epoch+1), flush=True)
@@ -154,6 +165,7 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
         history['train_loss'].append(epoch_loss)
         history['val_precision'].append(val_precision)
         history['val_recall'].append(val_recall)
+        history['step_sizes'].append(avg_step_size) ###
         
         print('\nCurrent history at epoch {}'.format(epoch+1), history)
 
