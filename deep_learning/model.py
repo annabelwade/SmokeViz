@@ -146,10 +146,17 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
             # save step sizes ###
             with torch.no_grad():
                 for param in model.parameters():
-                    if param.grad is not None:
-                        step_size = optimizer.param_groups[0]['lr'] * param.grad / (torch.sqrt(param.exp_avg_sq) + optimizer.defaults['eps'])
-                        step_sizes_epoch.append(step_size.norm().item())  # Log norm of step sizes ###
+                    if param in optimizer.state:
+                        if 'exp_avg_sq' in optimizer.state[param]:
+                            exp_avg_sq = optimizer.state[param]['exp_avg_sq']
+                            step_size = optimizer.param_groups[0]['lr'] * param.grad / (torch.sqrt(exp_avg_sq) + optimizer.defaults['eps'])
+                            step_sizes_epoch.append(step_size.norm().item())  # Log norm of step sizes
+                        else:
+                            raise ValueError('exp_avg_sq not in optimizer.state[param]')
+                    else:
+                        raise ValueError('param not in optimizer.state')
 
+            
             optimizer.step()
             train_loss = loss.item()
             total_loss += train_loss
