@@ -54,7 +54,17 @@ if 'noG18' in hyperparams:
 with open(dict_fp, 'rb') as handle:
     data_dict = pickle.load(handle)
 
-data_transforms = transforms.Compose([transforms.ToTensor()])
+if hyperparams['augmentation'] == 'True':
+    data_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
+        transforms.RandomRotation(degrees=90),
+        ])
+else:
+    data_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        ])
 
 train_set = SmokeDataset(data_dict['train'], data_transforms)
 val_set = SmokeDataset(data_dict['val'], data_transforms)
