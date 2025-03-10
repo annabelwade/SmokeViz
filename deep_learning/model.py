@@ -156,12 +156,13 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
                                 raise ValueError('exp_avg_sq not in optimizer.state[param]')
                         else:
                             raise ValueError('param not in optimizer.state')
-
             
             optimizer.step()
             train_loss = loss.item()
             total_loss += train_loss
-        avg_step_size = sum(step_sizes_epoch) / len(step_sizes_epoch) ###
+        if epoch>0:
+            avg_step_size = sum(step_sizes_epoch) / len(step_sizes_epoch) ###
+            history['step_sizes'].append(avg_step_size) ###
         epoch_loss = total_loss/len(train_dataloader)
 
         # print("Training Loss:   {0}".format(round(epoch_loss,8), epoch+1), flush=True)
@@ -173,7 +174,6 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
         history['train_loss'].append(epoch_loss)
         history['val_precision'].append(val_precision)
         history['val_recall'].append(val_recall)
-        history['step_sizes'].append(avg_step_size) ###
         
         print('\nCurrent history at epoch {}'.format(epoch+1), history)
 
