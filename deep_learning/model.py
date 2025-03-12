@@ -119,13 +119,11 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
 def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, exp_num, 
                 best_val_iou, loss_fn, history, dn_weights, decision_thresh=0.5):
     if history is None:
-        history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[], step_sizes=[]) 
+        history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[], lr=[]) 
     
     print('using classification decision threshold of {}'.format(decision_thresh))
     
     for epoch in range(start_epoch, n_epochs):
-        step_sizes_epoch = [] ###
-
         total_loss = 0.0
         print('--------------\nStarting Epoch: {}'.format(epoch), flush=True)
         model.train()
@@ -141,32 +139,18 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
             med_loss = loss_fn(preds[:,1,:,:], batch_labels[:,1,:,:]).to(device)
             low_loss = loss_fn(preds[:,2,:,:], batch_labels[:,2,:,:]).to(device)
             loss = dn_weights[0]*high_loss + dn_weights[1]*med_loss + dn_weights[2]*low_loss
-            loss.backward()
-
-            # save step sizes ###
-            if epoch > 0: # skip first epoch since no step sizes to log
-                with torch.no_grad():
-                    for param in model.parameters():
-                        if param in optimizer.state:
-                            if 'exp_avg_sq' in optimizer.state[param]:
-                                exp_avg_sq = optimizer.state[param]['exp_avg_sq']
-                                step_size = optimizer.param_groups[0]['lr'] * param.grad / (torch.sqrt(exp_avg_sq) + optimizer.defaults['eps'])
-                                step_sizes_epoch.append(step_size.norm().item())  # Log norm of step sizes
-                            else:
-                                raise ValueError('exp_avg_sq not in optimizer.state[param]')
-                        else:
-                            raise ValueError('param not in optimizer.state')
-            
+            loss.backward()            
             optimizer.step()
             train_loss = loss.item()
             total_loss += train_loss
-        if epoch>0:
-            avg_step_size = sum(step_sizes_epoch) / len(step_sizes_epoch) ###
-            history['step_sizes'].append(avg_step_size) ###
         epoch_loss = total_loss/len(train_dataloader)
 
         # print("Training Loss:   {0}".format(round(epoch_loss,8), epoch+1), flush=True)
         val_iou, val_loss, val_precision, val_recall = val_model(val_dataloader, model, loss_fn, dn_weights, decision_thresh=decision_thresh)
+        
+        scheduler.step(val_loss) # update learning rate
+        curr_lr = scheduler.get_last_lr()
+
         if isinstance(val_iou, torch.Tensor):
             val_iou = val_iou.item()
         history['val_iou'].append(val_iou)
@@ -174,6 +158,7 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
         history['train_loss'].append(epoch_loss)
         history['val_precision'].append(val_precision)
         history['val_recall'].append(val_recall)
+        history['lr'].append(curr_lr)
         
         print('\nCurrent history at epoch {}'.format(epoch+1), history)
 
@@ -251,6 +236,7 @@ elif loss == 'CombinedLoss':
     loss_fn = CombinedLoss(dice_weight=1)
 
 optimizer = torch.optim.Adam(list(model.parameters()), lr=lr) 
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 model = nn.DataParallel(model, device_ids=[i for i in range(num_GPUs)])
 model = model.to(device)
 best_val_iou = -100000.0
