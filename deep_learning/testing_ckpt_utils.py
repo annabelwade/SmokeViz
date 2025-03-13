@@ -353,7 +353,7 @@ def load_ckpt(exp_num, base_model=False, print_history=False, seed=None):
         # print('ckpt {}\n best_val_iou: {} \nepoch: {}'.format(ckpt_fp, best_val_iou, start_epoch))
     return ckpt_fp, checkpoint, model, optimizer
 
-def test_model(dataloader, model, BCE_loss, ckpt_fp, exp_num, sample_ds=False):
+def test_model(dataloader, model, BCE_loss, sample_ds=False):
     model.eval()
     torch.set_grad_enabled(False)
     total_loss = 0.0
@@ -361,21 +361,21 @@ def test_model(dataloader, model, BCE_loss, ckpt_fp, exp_num, sample_ds=False):
                'medium': {'int': 0, 'union':0, 'prev_int': 0, 'prev_union': 0}, 
                'low': {'int': 0, 'union':0, 'prev_int': 0, 'prev_union': 0}}
 
-    with open('configs/exp{}.json'.format(exp_num)) as fn:
-        hyperparams = json.load(fn)
-    dn_weights = list(hyperparams.get("dn_weights", [3,2,1]))  # Default to [3,2,1] if not specified
+    # with open('configs/exp{}.json'.format(exp_num)) as fn:
+    #     hyperparams = json.load(fn)
+    # dn_weights = list(hyperparams.get("dn_weights", [3,2,1]))  # Default to [3,2,1] if not specified
 
     for idx, data in enumerate(dataloader):
         batch_data, batch_labels, truth_fn = data
         batch_data, batch_labels = batch_data.to(device, dtype=torch.float), batch_labels.to(device, dtype=torch.float)
         preds = model(batch_data)
 
-        high_loss = BCE_loss(preds[:,0,:,:], batch_labels[:,0,:,:]).to(device)
-        med_loss = BCE_loss(preds[:,1,:,:], batch_labels[:,1,:,:]).to(device)
-        low_loss = BCE_loss(preds[:,2,:,:], batch_labels[:,2,:,:]).to(device)
-        loss = dn_weights[0]*high_loss + dn_weights[1]*med_loss + dn_weights[2]*low_loss  # Updated weighted loss
-        test_loss = loss.item()
-        total_loss += test_loss
+        # high_loss = BCE_loss(preds[:,0,:,:], batch_labels[:,0,:,:]).to(device)
+        # med_loss = BCE_loss(preds[:,1,:,:], batch_labels[:,1,:,:]).to(device)
+        # low_loss = BCE_loss(preds[:,2,:,:], batch_labels[:,2,:,:]).to(device)
+        # loss = dn_weights[0]*high_loss + dn_weights[1]*med_loss + dn_weights[2]*low_loss  # Updated weighted loss
+        # test_loss = loss.item()
+        # total_loss += test_loss
         iou_dict= compute_iou(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', iou_dict)
         iou_dict= compute_iou(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', iou_dict)
         iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict)
@@ -387,7 +387,7 @@ def test_model(dataloader, model, BCE_loss, ckpt_fp, exp_num, sample_ds=False):
     
     [high_iou, med_iou, low_iou, iou] = get_iou_by_density(iou_dict)
 
-    final_loss = total_loss/len(dataloader)
+    final_loss = 0 # total_loss/len(dataloader)
     # print("Testing Loss: {}\n".format(round(final_loss,8)), flush=True)
     return final_loss, iou_dict, [high_iou, med_iou, low_iou, iou]
 

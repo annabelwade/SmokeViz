@@ -244,8 +244,8 @@ if 'S' in ensemble or 'T' in ensemble:
 else:
     print('\n\n================== SINGLE-MODEL RESULTS ==================')
     for i, model in enumerate(model_list):
-        loss_fn = nn.BCEWithLogitsLoss()
-        iou_list, final_loss, individual_iou_lists = test_model(test_loader, model, loss_fn)
+        loss_fn = nn.BCEWithLogitsLoss() 
+        _ , _, iou_list = test_model(test_loader, model, loss_fn)
         # add the iou list to the row in the results table
         results_table[i+1][-4:] = iou_list
 
