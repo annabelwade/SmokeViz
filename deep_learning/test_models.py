@@ -20,6 +20,21 @@ from testing_ckpt_utils import save_test_results, get_test_results, load_ckpt, t
 from tabulate import tabulate
 from Loss import DiceLoss, CombinedLoss, get_loss_function
 
+# example call:
+# sbatch --export=INPUT=1_S --output=logs/ensemble_overall_testing_1.log --job-name=ensemble_testing_1 test_models.script
+# sbatch --export=INPUT=1_SI --output=logs/ensemble_overall_testing_1.log --job-name=ensemble_testing_1 test_models.script
+# sbatch --export=INPUT=1.9_F --output=logs/test_exp1.9.log --job-name=test_exp1.9 test_models.script
+
+# Input format #
+# 1_1.2.1_3_code = test exp 1, 1.2.1, 3; and ensemble them together
+# 1_F = test exp 1; don't ensemble
+
+# Codes in INPUT:
+# F = don't ensemble
+# T = ensemble
+# S = use all seeds for the experiment
+# I = run incremental ensemble size (starting with 1 model, 2 models, ... untill all models are in the ensemble)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 num_GPUs = torch.cuda.device_count()
 print(device, num_GPUs)
@@ -38,14 +53,6 @@ else:
     for param in sys.argv[2:]:
         params_to_show_list.append(param)
 
-# Input format #
-# 1_1.2.1_3_T
-# => test exp 1, 1.2.1, 3 individually; and ensemble them together
-# 1_F
-# => test exp 1; don't ensemble
-# 0_1.0.2_T
-# => test base model and exp 1.0.2 indivdually; and ensemble them togethwer
-# if ensemble = 'S' or 'ST', then ensemble across different seeds
 input = sys.argv[1]
 input_list = str(input).split('_')
 ensemble = input_list[-1]
@@ -193,8 +200,8 @@ for exp_num in tqdm(input_list):
 
 # print(tabulate(results_table,headers="firstrow", 6tablefmt='grid'))
 
-### Testing an ensemble of models
-incremental_ensemble_size = True
+
+incremental_ensemble_size = True if 'I' in ensemble else False
 incremental_results = {
     # 'ascending': { # add models in reverse order
     #     'iou_list': [], # will be a list of lists of iou values for each density level
@@ -234,6 +241,13 @@ if 'S' in ensemble or 'T' in ensemble:
         assert len(individual_iou_lists[0]) == 4, 'Individual iou list length does not match number of densities'
         for i, indiv_iou_list in enumerate(individual_iou_lists):
                 results_table[i+1][-4:] = indiv_iou_list
+else:
+    print('\n\n================== SINGLE-MODEL RESULTS ==================')
+    for i, model in enumerate(model_list):
+        loss_fn = nn.BCEWithLogitsLoss()
+        iou_list, final_loss, individual_iou_lists = test_model(test_loader, model, loss_fn)
+        # add the iou list to the row in the results table
+        results_table[i+1][-4:] = iou_list
 
 print(tabulate(results_table,headers="firstrow", tablefmt='grid'))
 pickle.dump(results_table, open( "results_tables/{}.pkl".format(input), "wb" )) 
