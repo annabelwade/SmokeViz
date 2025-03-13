@@ -308,7 +308,6 @@ def load_ckpt(exp_num, base_model=False, print_history=False, seed=None):
         if base_model:
             # Load base model
             ckpt_fp = "/scratch1/RDARCH/rda-ghpcs/Rey.Koki/SmokeViz_code/deep_learning/models/DeepLabV3Plus_exp0_1731375075.pth"
-            # ckpt_fp = './models/DeepLabV3Plus_exp1_1726250084.pth'
         else:
             use_best_model = ''
             if 'use_best_model' in hyperparams:
@@ -317,7 +316,7 @@ def load_ckpt(exp_num, base_model=False, print_history=False, seed=None):
 
             # print('use_best_model:', use_best_model)
 
-            ckpts_lst = glob('./models/{}_exp{}_*.pth'.format(hyperparams['architecture'], exp_num))
+            ckpts_lst = glob('/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_*.pth'.format(hyperparams['architecture'], exp_num))
             if seed is not None:
                 ckpts_lst = [ckpt for ckpt in ckpts_lst if (f'_seed{seed}_' in ckpt)]
 
@@ -326,14 +325,14 @@ def load_ckpt(exp_num, base_model=False, print_history=False, seed=None):
             
             if (len(exp_num)>1) and (len(ckpts_lst) == 0): # if no ckpt for exp_num, try to load ckpt for base exp_num
                 temp_exp_num = exp_num[0]
-                ckpts_lst = glob('./models/{}_exp{}_*.pth'.format(hyperparams['architecture'], temp_exp_num))
+                ckpts_lst = glob('/scratch1/RDARCH/rda-ghpcs/Annabel.Wade/semantic_segmentation_smoke/scripts/deep_learning/models/{}_exp{}_*.pth'.format(hyperparams['architecture'], temp_exp_num))
             
             if len(ckpts_lst) > 0:
                 ckpt_fp = max(ckpts_lst)
             else: 
                 raise FileNotFoundError('no ckpt for exp_num {}'.format(exp_num))
             
-        checkpoint=torch.load(ckpt_fp, map_location=torch.device(device))#'./models/{}_exp{}_*.pth'.format(hyperparams['architecture'], exp_num)) # insert exp_num of ckpt
+        checkpoint=torch.load(ckpt_fp, map_location=torch.device(device))
         state_dict = checkpoint['model_state_dict']
         first_key = next(iter(state_dict))
         if not first_key.startswith('module.'):
