@@ -81,6 +81,8 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
     total_loss = 0.0
     iou_dict= {'high': {'int': 0, 'union':0}, 'medium': {'int': 0, 'union':0}, 'low': {'int': 0, 'union':0}}
     stats_dict = {'high': {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}, 'medium': {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}, 'low': {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}}
+    sub_dict = {'correct': {'prob_sum': 0, 'num': 0}, 'incorrect': {'prob_sum': 0, 'num': 0}}
+    avg_probs_dict = {'high': sub_dict, 'medium': sub_dict, 'low': sub_dict}
     precision = [] # list
     recall = [] # list
 
@@ -102,6 +104,11 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
         iou_dict= compute_iou(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', iou_dict, decision_thresh=decision_thresh)
 
         if more_metrics:
+            # looking at the average probabilities of the correct and incorrect pixels
+            avg_probs_dict = avg_probs(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', avg_probs_dict, decision_thresh=decision_thresh)
+            avg_probs_dict = avg_probs(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', avg_probs_dict, decision_thresh=decision_thresh)
+            avg_probs_dict = avg_probs(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', avg_probs_dict, decision_thresh=decision_thresh)
+            
             stats_dict = get_stats(preds[:, 0, :, :], batch_labels[:, 0, :, :], 'high', stats_dict, decision_thresh=decision_thresh)
             stats_dict = get_stats(preds[:, 1, :, :], batch_labels[:, 1, :, :], 'medium', stats_dict, decision_thresh=decision_thresh)
             stats_dict = get_stats(preds[:, 2, :, :], batch_labels[:, 2, :, :], 'low', stats_dict, decision_thresh=decision_thresh)
@@ -109,17 +116,18 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
     weighted_iou = get_weighted_iou(iou_dict, dn_weights)
 
     if more_metrics:
+        avg_probs_result_dict = compute_avg_probs(avg_probs_dict)
         precision = compute_precision(stats_dict)
         recall = compute_recall(stats_dict)
 
     final_loss = total_loss/len(dataloader)
 
-    return weighted_iou, final_loss, precision, recall
+    return weighted_iou, final_loss, precision, recall, avg_probs_result_dict
 
 def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, exp_num, 
                 best_val_iou, loss_fn, history, dn_weights, decision_thresh=0.5):
     if history is None:
-        history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[], lr=[]) 
+        history = dict(train_loss=[], val_loss=[], val_iou=[], val_precision=[], val_recall=[], lr=[], avg_probs=[]) 
     
     print('using classification decision threshold of {}'.format(decision_thresh))
     
@@ -146,7 +154,7 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
         epoch_loss = total_loss/len(train_dataloader)
 
         # print("Training Loss:   {0}".format(round(epoch_loss,8), epoch+1), flush=True)
-        val_iou, val_loss, val_precision, val_recall = val_model(val_dataloader, model, loss_fn, dn_weights, decision_thresh=decision_thresh)
+        val_iou, val_loss, val_precision, val_recall, val_avg_probs_dict = val_model(val_dataloader, model, loss_fn, dn_weights, decision_thresh=decision_thresh)
         
         scheduler.step(val_loss) # update learning rate
         curr_lr = scheduler.get_last_lr()
@@ -159,6 +167,9 @@ def train_model(train_dataloader, val_dataloader, model, n_epochs, start_epoch, 
         history['val_precision'].append(val_precision)
         history['val_recall'].append(val_recall)
         history['lr'].append(curr_lr)
+
+        if epoch % 10 == 0:
+            history['avg_probs'].append(val_avg_probs_dict)
         
         print('\nCurrent history at epoch {}'.format(epoch+1), history)
 

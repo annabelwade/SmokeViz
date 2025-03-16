@@ -70,6 +70,34 @@ def get_stats(pred, true, level, stats_dict, convert_to_classes=True, decision_t
     stats_dict[level]['tn'] += tn.sum()
     return stats_dict
 
+def avg_probs(pred, true, level, avg_probs_dict, decision_thresh=0.5):
+    # take in the predicted probabilities and the true labels
+    # convert the predicted probabilities to classes and compare to the true labels
+    # compute avg probabilities of correct pixels and incorrect pixels
+    probs = torch.sigmoid(pred)
+    pred = (probs > decision_thresh) * 1
+    true = true.int()
+    correct = (pred == true)
+    incorrect = (pred != true)
+    avg_probs_dict[level]['correct']['prob_sum'] += probs[correct].sum()
+    avg_probs_dict[level]['correct']['num'] += correct.sum()
+    avg_probs_dict[level]['incorrect']['prob_sum'] += probs[incorrect].sum()
+    avg_probs_dict[level]['incorrect']['num'] += incorrect.sum()
+    return avg_probs_dict
+
+def compute_avg_probs(avg_probs_dict):
+    result_dict = {}
+    for level in avg_probs_dict.keys():
+        correct_avg_prob = avg_probs_dict[level]['correct']['prob_sum']/avg_probs_dict[level]['correct']['num']
+        incorrect_avg_prob = avg_probs_dict[level]['incorrect']['prob_sum']/avg_probs_dict[level]['incorrect']['num']
+        result_dict[level] = {'correct_avg_prob': correct_avg_prob, 'incorrect_avg_prob': incorrect_avg_prob}
+    
+    # overall average probabilities
+    overall_correct_avg_prob = (avg_probs_dict['high']['correct']['prob_sum'] + avg_probs_dict['medium']['correct']['prob_sum'] + avg_probs_dict['low']['correct']['prob_sum'])/(avg_probs_dict['high']['correct']['num'] + avg_probs_dict['medium']['correct']['num'] + avg_probs_dict['low']['correct']['num'])
+    overall_incorrect_avg_prob = (avg_probs_dict['high']['incorrect']['prob_sum'] + avg_probs_dict['medium']['incorrect']['prob_sum'] + avg_probs_dict['low']['incorrect']['prob_sum'])/(avg_probs_dict['high']['incorrect']['num'] + avg_probs_dict['medium']['incorrect']['num'] + avg_probs_dict['low']['incorrect']['num'])
+    result_dict['overall'] = {'correct_avg_prob': overall_correct_avg_prob, 'incorrect_avg_prob': overall_incorrect_avg_prob}
+    return result_dict
+
 def compute_precision(stats_dict):
     try:
         high_precision = stats_dict['high']['tp']/(stats_dict['high']['tp'] + stats_dict['high']['fp'])
