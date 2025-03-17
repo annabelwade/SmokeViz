@@ -77,12 +77,15 @@ def avg_probs(pred, true, level, avg_probs_dict, decision_thresh=0.5):
     probs = torch.sigmoid(pred)
     pred = (probs > decision_thresh) * 1
     true = true.int()
+    print('pred shape: ', pred.shape, 'true shape: ', true.shape)
+    print(probs, probs[correct])
+    print(pred[0], true[0], pred[0] == true[0], pred[0] != true[0])
     correct = (pred == true)
     incorrect = (pred != true)
-    avg_probs_dict[level]['correct']['prob_sum'] += probs[correct].sum()
-    avg_probs_dict[level]['correct']['num'] += correct.sum()
-    avg_probs_dict[level]['incorrect']['prob_sum'] += probs[incorrect].sum()
-    avg_probs_dict[level]['incorrect']['num'] += incorrect.sum()
+    avg_probs_dict[level]['correct']['prob_sum'] += probs[correct].sum().item()
+    avg_probs_dict[level]['correct']['num'] += correct.sum().item()
+    avg_probs_dict[level]['incorrect']['prob_sum'] += probs[incorrect].sum().item()
+    avg_probs_dict[level]['incorrect']['num'] += incorrect.sum().item()
     return avg_probs_dict
 
 def compute_avg_probs(avg_probs_dict):
@@ -147,5 +150,5 @@ def compute_recall(stats_dict):
     recall_vals = [high_recall, med_recall, low_recall, recall]
     recall_vals = [item.item() for item in recall_vals]
     return recall_vals
-    
+
 

@@ -108,6 +108,7 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
             avg_probs_dict = avg_probs(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', avg_probs_dict, decision_thresh=decision_thresh)
             avg_probs_dict = avg_probs(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', avg_probs_dict, decision_thresh=decision_thresh)
             avg_probs_dict = avg_probs(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', avg_probs_dict, decision_thresh=decision_thresh)
+            print('avg_probs_dict: ', avg_probs_dict)
             
             stats_dict = get_stats(preds[:, 0, :, :], batch_labels[:, 0, :, :], 'high', stats_dict, decision_thresh=decision_thresh)
             stats_dict = get_stats(preds[:, 1, :, :], batch_labels[:, 1, :, :], 'medium', stats_dict, decision_thresh=decision_thresh)
