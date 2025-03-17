@@ -81,8 +81,8 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
     total_loss = 0.0
     iou_dict= {'high': {'int': 0, 'union':0}, 'medium': {'int': 0, 'union':0}, 'low': {'int': 0, 'union':0}}
     stats_dict = {'high': {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}, 'medium': {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}, 'low': {'tp': 0, 'fp': 0, 'fn': 0, 'tn': 0}}
-    sub_dict = {'correct': {'prob_sum': 0, 'num': 0}, 'incorrect': {'prob_sum': 0, 'num': 0}}
-    avg_probs_dict = {'high': sub_dict, 'medium': sub_dict, 'low': sub_dict}
+    sub_dict = lambda: {'correct': {'prob_sum': 0, 'num': 0}, 'incorrect': {'prob_sum': 0, 'num': 0}}
+    avg_probs_dict = {'high': sub_dict(), 'medium': sub_dict(), 'low': sub_dict()}
     precision = [] # list
     recall = [] # list
 
@@ -108,7 +108,7 @@ def val_model(dataloader, model, loss_fn, dn_weights, decision_thresh=0.5):
             avg_probs_dict = avg_probs(preds[:,0,:,:], batch_labels[:,0,:,:], 'high', avg_probs_dict, decision_thresh=decision_thresh)
             avg_probs_dict = avg_probs(preds[:,1,:,:], batch_labels[:,1,:,:], 'medium', avg_probs_dict, decision_thresh=decision_thresh)
             avg_probs_dict = avg_probs(preds[:,2,:,:], batch_labels[:,2,:,:], 'low', avg_probs_dict, decision_thresh=decision_thresh)
-            print('avg_probs_dict: ', avg_probs_dict)
+            # print('avg_probs_dict: ', avg_probs_dict)
             
             stats_dict = get_stats(preds[:, 0, :, :], batch_labels[:, 0, :, :], 'high', stats_dict, decision_thresh=decision_thresh)
             stats_dict = get_stats(preds[:, 1, :, :], batch_labels[:, 1, :, :], 'medium', stats_dict, decision_thresh=decision_thresh)
