@@ -77,11 +77,12 @@ def avg_probs(pred, true, level, avg_probs_dict, decision_thresh=0.5):
     probs = torch.sigmoid(pred)
     pred = (probs > decision_thresh) * 1
     true = true.int()
+    
+    correct = (pred == true)
+    incorrect = (pred != true)
     print('pred shape: ', pred.shape, 'true shape: ', true.shape)
     print(probs, probs[correct])
     print(pred[0], true[0], pred[0] == true[0], pred[0] != true[0])
-    correct = (pred == true)
-    incorrect = (pred != true)
     avg_probs_dict[level]['correct']['prob_sum'] += probs[correct].sum().item()
     avg_probs_dict[level]['correct']['num'] += correct.sum().item()
     avg_probs_dict[level]['incorrect']['prob_sum'] += probs[incorrect].sum().item()
